@@ -77,7 +77,7 @@ window.custom = async function() {
   }
 
   function init() {
-    const questionNums = [3,4];
+    const questionNums = [5,6,7,8,9];
     for(let q of questionNums) {
       listenUrlInput(q);
     }
