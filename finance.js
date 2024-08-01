@@ -10,17 +10,19 @@ window.custom = async function() {
     url = url.split('ix?doc=/').join(''); 
 
     // regex test, with match groups for CIK and filing ID
-    const regex = /https:\/\/www.sec.gov\/Archives\/edgar\/data\/([^\/]+)\/[^\/]+\/([^\/]+)$/;
+    const regex = /https:\/\/www.sec.gov\/Archives\/edgar\/data\/([^\/]+)\/([^\/]+)\/([^\/]+)$/;
     const m = regex.exec(url);
     if ((m) === null) {
       return "⚠️ Invalid SEC filing URL";
     }
     let cik = m[1].padStart(10, '0');
-    let docId = m[2];
+    let accessionNum = m[2];
+    let docId = m[3];
 
     const request = new Request(`https://data.sec.gov/submissions/CIK${cik}.json`);
     const response = await fetch(request);
 
+    // validates CIK
     if(!response.ok) {
       console.error(response);
       return "⚠️ Unable to validate URL";
@@ -32,6 +34,12 @@ window.custom = async function() {
     const index = json['filings']['recent']['primaryDocument'].indexOf(docId);
     const doctype = json['filings']['recent']['primaryDocDescription'][index];
     const date = json['filings']['recent']['filingDate'][index];
+    const accessionNumApi = json['filings']['recent']['accessionNumber'][index];
+
+    // validate filename (via valid index) and accession number (middle number)
+    if(index < 0 || accessionNumApi.replaceAll("-","") !== accessionNum) {
+      return `⚠️ Invalid SEC filing URL`;
+    }
 
     // validate doc type
     if(doctype !== "10-Q" && doctype !== "10-K") {
@@ -49,41 +57,43 @@ window.custom = async function() {
     return "";
   }
 
-  function listenUrlInput(questionNum) {
-    const questionParent = document.querySelector(`div#question-${questionNum}`);
-    const questionInput = questionParent.querySelector("textarea");
-    const questionText = questionParent.querySelector(".surge-wysiwyg div p");
+  function listen() {
+    document.addEventListener('change', (e) => {
+      console.log(e)
+      if(e.target.matches('textarea.input-base')) {
+        const ancestor = e.target.closest('div[class=""]:has(div.surge-wysiwyg)');
+        const questionText = ancestor?.querySelector(".surge-wysiwyg div p.verify-url");
+        let warningText = questionText.querySelector(".warning");
 
-    const warningText = document.createElement("span");
-    questionText.appendChild(warningText);
-    warningText.style.cssText = 'color: red; padding-left: 20px;';
+        if(questionText) {
 
-    questionInput.addEventListener('change', (e) => {
-      const url = e.target.value.trim();
-      if(url.length > 0) {
-        validateUrl(url).then((err) => {
-          if(err) {
-            warningText.innerText = err;
+          if(!warningText) {
+            warningText = document.createElement("span");
+            questionText.appendChild(warningText);
+            warningText.style.cssText = 'color: red; padding-left: 20px;';
+            warningText.classList.add("warning");
+          }
+
+          const url = e.target.value.trim();
+          if(url.length > 0) {
+            validateUrl(url).then((err) => {
+              if(err) {
+                warningText.innerText = err;
+              }
+              else {
+                warningText.innerText = "✅";
+              }
+            });
           }
           else {
-            warningText.innerText = "✅";
+            warningText.innerText = "";
           }
-        });
-      }
-      else {
-        warningText.innerText = "";
+        }
       }
     });
   }
 
-  function init() {
-    const questionNums = [5,6,7,8,9];
-    for(let q of questionNums) {
-      listenUrlInput(q);
-    }
-  }
-
-  init();
+  listen();
 };
 
 // Only for testing locally in the console
