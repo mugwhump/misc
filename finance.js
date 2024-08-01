@@ -32,7 +32,7 @@ window.custom = async function() {
 
     // parse json response for filing date and doctype
     const index = json['filings']['recent']['primaryDocument'].indexOf(docId);
-    const doctype = json['filings']['recent']['primaryDocDescription'][index];
+    const doctype = json['filings']['recent']['form'][index];
     const date = json['filings']['recent']['filingDate'][index];
     const accessionNumApi = json['filings']['recent']['accessionNumber'][index];
 
